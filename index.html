@@ -3,944 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIOS Land Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f5f7fa00;
-        }
-        #map { 
-            height: 100vh;
-            width: 100%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .custom-marker-icon {
-            border: 2px solid #ffffff;
-            color: white;
-            font-weight: 600;
-            font-size: 12px;
-            text-align: center;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            line-height: 24px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: transform 0.2s;
-        }
-        .custom-marker-icon:hover {
-            transform: scale(1.1);
-        }
-        .dropdown-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1100;
-            display: flex;
-            gap: 12px;
-            background: #ffffff;
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        button {
-            padding: 8px 16px;
-            border: none;
-            background: #1a73e8;
-            color: white;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background: #1557b0;
-        }
-        button:active {
-            background: #104080;
-        }
-        #property-selector, #property-search-container, #market-search-container, #market-selector-container {
-            position: absolute;
-            z-index: 1000;
-            padding: 1px;
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.521);
-            max-width: 320px;
-            font-size: 14px;
-        }
-        #property-selector {
-            top: 80px;
-            left: 20px;
-        }
-        #property-search-container {
-            top: 130px;
-            left: 20px;
-            z-index: 1600;
-        }
-        #market-search-container {
-            top: 180px;
-            left: 20px;
-            z-index: 1400;
-        }
-        #market-selector-container {
-            top: 230px;
-            left: 20px;
-        }
-        #market-selector-list {
-            max-height: 200px;
-            overflow-y: auto;
-            display: block;
-            margin-top: 8px;
-        }
-        #market-selector-list.collapsed {
-            display: none;
-        }
-        #market-toggle {
-            width: 100%;
-            text-align: left;
-            background: #f1f3f5;
-            border: none;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 6px;
-            font-weight: 500;
-            color: #000000;
-            transition: background 0.2s;
-        }
-        #market-toggle:hover {
-            background: #e2e6ea;
-        }
-        #market-search, #property-search {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-        #market-search:focus, #property-search:focus {
-            outline: none;
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
-        }
-        #market-search-results, #search-results {
-            max-height: 200px;
-            overflow-y: auto;
-            background: #ffffff;
-            border: 1px solid #d1d5db;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            display: none;
-        }
-        #market-search-results {
-            z-index: 1500;
-        }
-        #search-results {
-            z-index: 1700;
-        }
-        #market-search-results div, #search-results div {
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        #market-search-results div:hover, #search-results div:hover {
-            background: #f1f3f5;
-        }
-        .toggle-container {
-            padding: 12px;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 320px;
-            font-size: 14px;
-        }
-        .map-title {
-            position: absolute;
-            top: 20px;
-            left: 60px;
-            z-index: 1000;
-            font-size: 24px;
-            font-weight: 600;
-            color: #1f2937;
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .logo {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            color: #1f2937;
-            font-weight: 600;
-            font-size: 14px;
-            line-height: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo img {
-            width: 40px;
-            height: 40px;
-        }
-        .date-time {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            font-size: 14px;
-            color: #1f2937;
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .leaflet-control-layers-expanded {
-            z-index: 1200 !important;
-            background: #ffffff;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            padding: 10px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1300;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background: #ffffff;
-            margin: 10% auto;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            width: 90%;
-            max-width: 500px;
-        }
-        .close {
-            color: #6b7280;
-            float: right;
-            font-size: 24px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .close:hover,
-        .close:focus {
-            color: #1f2937;
-        }
-        #exclusions-list {
-            list-style-type: none;
-            padding: 0;
-            margin-top: 16px;
-        }
-        #exclusions-list li {
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        #loading-indicator {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: none;
-            font-size: 14px;
-            color: #1f2937;
-        }
-        table.key-table {
-            border-collapse: collapse;
-            font-size: 12px;
-            width: 100%;
-            margin-top: 8px;
-        }
-        table.key-table th, table.key-table td {
-            border: 1px solid #e5e7eb;
-            padding: 8px;
-            line-height: 1.4;
-        }
-        table.key-table th {
-            background: #f9fafb;
-            text-align: left;
-            font-weight: 600;
-            font-size: 13px;
-        }
-        #market-selector-container label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        .leaflet-top.leaflet-right {
-            top: 80px !important;
-        }
-    </style>
+    <title>National IOS Land Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css">
 </head>
-<body>
-    <div class="map-title" id="map-title">NIOS Land Map</div>
-    <div class="logo">
-        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAAAAAAAD/2wBDAAoHBwkHBgoJCAkKLQpLCDAtMT0tKCoqKCo0LCwwNEA4QDxAQEBARERA/2wBDAQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwv/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9/wD/AJ4aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9aX9rP8A2mP+EH/4R3/AI9a" alt="NIOS Logo">
-        <span></span>
-    </div>
-    <div id="loading-indicator">Loading properties...</div>
-    <div class="date-time" id="date-time"></div>
-    <select id="property-selector">
-        <option value="">Loading properties...</option>
-    </select>
-    <div id="property-search-container">
-        <input type="text" id="property-search" placeholder="Search properties...">
-        <div id="search-results"></div>
-    </div>
-    <div id="market-search-container">
-        <input type="text" id="market-search" placeholder="Search markets...">
-        <div id="market-search-results"></div>
-    </div>
-    <div id="market-selector-container">
-        <button id="market-toggle">Toggle Market Selection</button>
-        <div id="market-selector-list" class="collapsed">
-            <label><input type="checkbox" id="select-all-markets" checked> Select All Markets</label>
+<body class="bg-gray-100 font-sans">
+    <!-- Header Section -->
+    <header class="bg-blue-900 text-white py-6 shadow-lg">
+        <div class="container mx-auto text-center">
+            <h1 class="text-4xl font-bold tracking-tight">National IOS Land Search</h1>
+            <p class="mt-2 text-lg">Find the perfect land for your next project</p>
         </div>
-    </div>
-    <div class="dropdown-container">
-        <button id="manage-exclusions">Manage Exclusions</button>
-        <button id="send-excluded">Send Excluded List</button>
-        <button id="screenshot-markets">Take Screenshots</button>
-    </div>
-    <div id="map"></div>
-    <div id="exclusions-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">×</span>
-            <h2>Manage Exclusions</h2>
-            <ul id="exclusions-list"></ul>
-        </div>
-    </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // Set dynamic date and time
-        const now = new Date();
-        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Chicago' };
-        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' };
-        const timeString = now.toLocaleTimeString('en-US', timeOptions).replace(/^0/, '');
-        const dateString = now.toLocaleDateString('en-US', dateOptions);
-        document.getElementById('date-time').innerHTML = `${timeString} CDT, ${dateString}`;
+    </header>
 
-        // Initialize map with a fallback view
-        const map = L.map('map').setView([37.0902, -95.7129], 4);
+    <!-- Main Content -->
+    <main class="container mx-auto py-12 px-4">
+        <section class="bg-white rounded-lg shadow-xl p-8 max-w-2xl mx-auto">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Search for Your Ideal Land</h2>
+            <form id="landSearchForm" class="space-y-6">
+                <!-- Acres Input -->
+                <div>
+                    <label for="acres" class="block text-sm font-medium text-gray-700">Desired Acres</label>
+                    <div class="flex space-x-2">
+                        <input
+                            type="number"
+                            id="acres"
+                            name="acres"
+                            min="0"
+                            step="0.01"
+                            placeholder="Enter acres (e.g., 5.25)"
+                            class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                        <select
+                            id="acresOption"
+                            name="acresOption"
+                            class="mt-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="exact">Exact</option>
+                            <option value="plus10">Exact +10 acres</option>
+                            <option value="anyAbove">Any above</option>
+                        </select>
+                    </div>
+                </div>
 
-        // Define base layers
-        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+                <!-- Square Footage Input -->
+                <div>
+                    <label for="squareFootage" class="block text-sm font-medium text-gray-700">Planned Building Square Footage</label>
+                    <input
+                        type="number"
+                        id="squareFootage"
+                        name="squareFootage"
+                        min="0"
+                        placeholder="Enter square footage (e.g., 10000)"
+                        class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
 
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        });
-
-        const baseLayers = {
-            "Street Map": streetLayer,
-            "Satellite": satelliteLayer
-        };
-
-        // Define FEMA flood overlay with error handling
-        let floodLayer;
-        try {
-            floodLayer = L.esri.dynamicMapLayer({
-                url: 'https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer',
-                layers: [28],
-                opacity: 0.5,
-                attribution: 'FEMA National Flood Hazard Layer'
-            });
-            floodLayer.on('load', () => console.log('FEMA Flood Layer loaded successfully'));
-            floodLayer.on('error', (err) => console.error('FEMA Flood Layer error:', err));
-        } catch (error) {
-            console.error('Error initializing FEMA Flood Layer:', error);
-            floodLayer = L.layerGroup();
-        }
-
-        const overlays = {
-            "FEMA Flood Zones": floodLayer
-        };
-
-        L.control.layers(baseLayers, overlays, { collapsed: true }).addTo(map);
-
-        // Global variables
-        const markers = {};
-        let properties = [];
-        const excluded = new Set();
-        const defaultColor = '#1a73e8';
-        const marketColors = {
-            'Dallas': '#e63946',
-            'Houston': '#2a9d8f',
-            'Austin': '#457b9d',
-            'default': '#1a73e8'
-        };
-
-        // City coordinates for markets
-        const marketCityCoords = {
-            'Dallas': [32.7767, -96.7970],
-            'Houston': [29.7604, -95.3698],
-            'Austin': [30.2672, -97.7431]
-        };
-
-        // Wait for map tiles to load
-        async function waitForTilesLoaded(layer) {
-            return new Promise((resolve) => {
-                layer.on('load', resolve);
-                layer.redraw();
-                setTimeout(resolve, 10000);
-            });
-        }
-
-        // Get selected markets
-        function getSelectedMarkets() {
-            const checkboxes = document.querySelectorAll('#market-selector-list input[type="checkbox"][value]');
-            const selected = Array.from(checkboxes).filter(checkbox => checkbox.checked).map(checkbox => checkbox.value);
-            const allMarkets = Array.from(checkboxes).map(checkbox => checkbox.value);
-            if (selected.length === allMarkets.length) {
-                return 'all';
-            }
-            return selected;
-        }
-
-        // Take screenshots for the selected markets
-        async function takeMarketScreenshots() {
-            let marketsToCapture = getSelectedMarkets();
-            if (marketsToCapture === 'all') {
-                marketsToCapture = [...new Set(properties.map(p => p.market).filter(m => m !== 'N/A' && m !== ''))];
-            } else if (marketsToCapture.length === 0) {
-                alert('Please select at least one market.');
-                return;
-            }
-
-            const currentZoom = map.getZoom();
-            const currentCenter = map.getCenter();
-            const originalLayer = map.hasLayer(satelliteLayer) ? satelliteLayer : streetLayer;
-
-            // Store original display styles
-            const dropdownContainer = document.querySelector('.dropdown-container');
-            const propertySelector = document.getElementById('property-selector');
-            const marketSelectorContainer = document.getElementById('market-selector-container');
-            const marketSearchContainer = document.getElementById('market-search-container');
-            const propertySearchContainer = document.getElementById('property-search-container');
-            const dateTime = document.getElementById('date-time');
-            const mapTitle = document.getElementById('map-title');
-            const originalStyles = {
-                dropdownContainer: dropdownContainer.style.display,
-                propertySelector: propertySelector.style.display,
-                marketSelectorContainer: marketSelectorContainer.style.display,
-                marketSearchContainer: marketSearchContainer.style.display,
-                propertySearchContainer: propertySearchContainer.style.display,
-                dateTime: dateTime.style.display,
-                mapTitle: mapTitle.style.display
-            };
-
-            const screenshots = [];
-
-            for (const market of marketsToCapture) {
-                const marketProperties = properties.filter(prop => prop.market === market && !excluded.has(properties.indexOf(prop)));
-                if (marketProperties.length === 0) continue;
-
-                const bounds = L.latLngBounds(marketProperties.map(prop => [prop.lat, prop.lng]));
-                const cityCoords = marketCityCoords[market] || bounds.getCenter();
-                const zoomLevel = 11;
-
-                // Update marker numbers for this market
-                const marketIndices = properties
-                    .map((prop, index) => ({ prop, index }))
-                    .filter(({ prop, index }) => prop.market === market && !excluded.has(index))
-                    .map(({ index }) => index);
-
-                Object.keys(markers).forEach(index => {
-                    if (map.hasLayer(markers[index])) {
-                        map.removeLayer(markers[index]);
-                    }
-                });
-
-                marketIndices.forEach((index, displayIndex) => {
-                    const property = properties[index];
-                    const number = displayIndex + 1;
-                    const bgColor = marketColors[property.market] || defaultColor;
-                    const customIcon = L.divIcon({
-                        className: '',
-                        html: `<div class="custom-marker-icon" style="background-color: ${bgColor};">${number}</div>`,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
-                    });
-
-                    markers[index].setIcon(customIcon);
-                    markers[index].addTo(map);
-                });
-
-                map.setView(cityCoords, zoomLevel);
-                map.fitBounds(bounds.pad(0.5));
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                map.removeLayer(satelliteLayer);
-                streetLayer.addTo(map);
-                await waitForTilesLoaded(streetLayer);
-
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                // Hide UI elements
-                dropdownContainer.style.display = 'none';
-                propertySelector.style.display = 'none';
-                marketSelectorContainer.style.display = 'none';
-                marketSearchContainer.style.display = 'none';
-                propertySearchContainer.style.display = 'none';
-                dateTime.style.display = 'none';
-                mapTitle.style.display = 'none';
-
-                // Create key div
-                let keyDiv = document.createElement('div');
-                keyDiv.style.position = 'absolute';
-                keyDiv.style.bottom = '80px';
-                keyDiv.style.right = '20px';
-                keyDiv.style.background = '#ffffff';
-                keyDiv.style.padding = '12px';
-                keyDiv.style.borderRadius = '8px';
-                keyDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                keyDiv.style.zIndex = '1000';
-                keyDiv.style.maxWidth = '320px';
-                keyDiv.style.overflow = 'auto';
-
-                let keyHtml = `<h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #1f2937;">${market} Market Key</h3><table class="key-table"><tr><th>Number</th><th>Address</th><th>Acreage</th></tr>`;
-                marketProperties.forEach((prop, displayIndex) => {
-                    const index = properties.indexOf(prop);
-                    const num = displayIndex + 1;
-                    const name = prop.name;
-                    const ac = prop.ac || 'N/A';
-                    keyHtml += `<tr><td>${num}</td><td>${name}</td><td>${ac}</td></tr>`;
-                });
-                keyHtml += '</table>';
-                keyDiv.innerHTML = keyHtml;
-                document.body.appendChild(keyDiv);
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                try {
-                    const canvas = await html2canvas(document.body, {
-                        useCORS: true,
-                        allowTaint: false,
-                        logging: false,
-                        width: window.innerWidth,
-                        height: window.innerHeight,
-                        scale: window.devicePixelRatio
-                    });
-                    const dataURL = canvas.toDataURL('image/png');
-                    screenshots.push({ market, dataURL });
-                } catch (error) {
-                    console.error(`Error taking screenshot for market ${market}:`, error);
-                    alert(`Failed to take screenshot for market ${market}. Please try again.`);
-                }
-
-                keyDiv.remove();
-            }
-
-            // Restore UI elements
-            dropdownContainer.style.display = originalStyles.dropdownContainer;
-            propertySelector.style.display = originalStyles.propertySelector;
-            marketSelectorContainer.style.display = originalStyles.marketSelectorContainer;
-            marketSearchContainer.style.display = originalStyles.marketSearchContainer;
-            propertySearchContainer.style.display = originalStyles.propertySearchContainer;
-            dateTime.style.display = originalStyles.dateTime;
-            mapTitle.style.display = originalStyles.mapTitle;
-
-            map.setView(currentCenter, currentZoom);
-            originalLayer.addTo(map);
-            updateMapAndProperties(getSelectedMarkets());
-
-            document.getElementById('loading-indicator').style.display = 'none';
-            document.getElementById('loading-indicator').textContent = 'Loading properties...';
-
-            if (screenshots.length > 0) {
-                const { jsPDF } = window.jspdf;
-                const dateStr = new Date().toISOString().split('T')[0];
-                for (const screenshot of screenshots) {
-                    const doc = new jsPDF({ orientation: 'landscape' });
-                    const pdfWidth = doc.internal.pageSize.getWidth();
-                    const pdfHeight = doc.internal.pageSize.getHeight();
-
-                    const imgProps = doc.getImageProperties(screenshot.dataURL);
-                    const scale = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
-                    const width = imgProps.width * scale;
-                    const height = imgProps.height * scale;
-                    const x = (pdfWidth - width) / 2;
-                    const y = (pdfHeight - height) / 2;
-                    doc.addImage(screenshot.dataURL, 'PNG', x, y, width, height);
-                    doc.save(`NIOS Land Map_${screenshot.market}_${dateStr}.pdf`);
-                }
-            }
-        }
-
-        // Parse CSV and initialize map markers
-        Papa.parse('https://docs.google.com/spreadsheets/d/e/2PACX-1vSepf04ahEjboAEowbxyzMhOq18C-qGYzcrHAAvnF85Er-b_zpbk-nC6MZ7OZmlui5sLnl6q7jwiw7C/pub?gid=0&single=true&output=csv', {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-            complete: async function(results) {
-                document.getElementById('loading-indicator').style.display = 'block';
-                document.getElementById('loading-indicator').textContent = 'Loading properties...';
-
-                properties = results.data
-                    .map(row => ({
-                        name: row.Name || 'N/A',
-                        lat: parseFloat(row.lat),
-                        lng: parseFloat(row.lng),
-                        zoning: row.Zoning || 'N/A',
-                        ac: row.ac || 'N/A',
-                        market: row.Market || 'N/A',
-                        dollar_per_sf: row['$/sf'] || 'N/A',
-                        price: row.Price || 'N/A',
-                        link: row.link || 'N/A'
-                    }))
-                    .filter(row => !isNaN(row.lat) && !isNaN(row.lng));
-
-                if (properties.length > 0) {
-                    const bounds = L.latLngBounds(properties.map(prop => [prop.lat, prop.lng]));
-                    map.fitBounds(bounds.pad(0.2));
-                } else {
-                    console.warn('No valid properties loaded from CSV. Using fallback view.');
-                }
-
-                // Initial marker creation with global numbering
-                for (let index = 0; index < properties.length; index++) {
-                    const property = properties[index];
-                    const number = index + 1;
-                    const bgColor = marketColors[property.market] || defaultColor;
-                    const customIcon = L.divIcon({
-                        className: '',
-                        html: `<div class="custom-marker-icon" style="background-color: ${bgColor};">${number}</div>`,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
-                    });
-
-                    const popupContent = `
-                        <div style="font-family: 'Inter', sans-serif; font-size: 13px; color: #1f2937;">
-                            <b>Name:</b> ${property.name}<br>
-                            <b>Lat:</b> ${property.lat}<br>
-                            <b>Lng:</b> ${property.lng}<br>
-                            <b>Zoning:</b> ${property.zoning}<br>
-                            <b>AC:</b> ${property.ac}<br>
-                            <b>Market:</b> ${property.market}<br>
-                            <b>$/sf:</b> ${property.dollar_per_sf}<br>
-                            <b>Price:</b> ${property.price}<br>
-                            <a href="${property.link}" target="_blank" style="color: #1a73e8; text-decoration: none;">View Brochure / Details</a><br>
-                            <label style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" class="exclude-checkbox" data-index="${index}"> Exclude
-                            </label>
+                <!-- Market Search Inputs -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Market Locations</label>
+                    <div id="marketsContainer">
+                        <div class="market-field">
+                            <input
+                                type="text"
+                                name="markets[]"
+                                placeholder="Enter city or region (e.g., Austin, TX)"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            >
                         </div>
-                    `;
+                    </div>
+                    <button
+                        type="button"
+                        id="addMarket"
+                        class="mt-2 text-blue-600 hover:text-blue-800 font-medium text-sm"
+                    >
+                        + Add Another Market
+                    </button>
+                </div>
 
-                    const marker = L.marker([property.lat, property.lng], { icon: customIcon })
-                        .addTo(map)
-                        .bindPopup(popupContent);
+                <!-- Zoning Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Zoning Type</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="zoningIndustrial"
+                                name="zoning[]"
+                                value="Industrial"
+                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            >
+                            <label for="zoningIndustrial" class="ml-2 text-sm text-gray-700">Industrial</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="zoningCommercial"
+                                name="zoning[]"
+                                value="Commercial"
+                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            >
+                            <label for="zoningCommercial" class="ml-2 text-sm text-gray-700">Commercial</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="zoningManufacturing"
+                                name="zoning[]"
+                                value="Manufacturing"
+                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            >
+                            <label for="zoningManufacturing" class="ml-2 text-sm text-gray-700">Manufacturing</label>
+                        </div>
+                    </div>
+                </div>
 
-                    markers[index] = marker;
-                }
+                <!-- Tenant Input -->
+                <div>
+                    <label for="tenant" class="block text-sm font-medium text-gray-700">Tenant</label>
+                    <input
+                        type="text"
+                        id="tenant"
+                        name="tenant"
+                        placeholder="Enter tenant (e.g., Company Name)"
+                        class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    >
+                </div>
 
-                // Populate property selector
-                const propertySelector = document.getElementById('property-selector');
-                propertySelector.innerHTML = '<option value="">Select a property...</option>';
-                properties.forEach(function(property, index) {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = `${index + 1}: ${property.name}`;
-                    propertySelector.appendChild(option);
-                });
+                <!-- Buttons -->
+                <div class="text-center flex justify-center space-x-4">
+                    <button
+                        type="submit"
+                        class="inline-block bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 transition duration-300"
+                    >
+                        Search Land
+                    </button>
+                    <button
+                        type="button"
+                        id="clearForm"
+                        class="inline-block bg-red-600 text-white px-6 py-3 rounded-md font-medium hover:bg-red-700 transition duration-300"
+                    >
+                        Clear
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
 
-                propertySelector.addEventListener('change', function() {
-                    const selectedIndex = parseInt(this.value);
-                    if (selectedIndex >= 0) {
-                        const property = properties[selectedIndex];
-                        map.flyTo([property.lat, property.lng], 15);
-                        markers[selectedIndex].openPopup();
-                    }
-                });
+    <!-- Property Map Button -->
+    <div class="fixed bottom-4 right-4">
+        <a href="https://jakepistone.github.io/NIOS-Land-Map/" class="bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 transition duration-300">
+            Click For Property Map
+        </a>
+    </div>
 
-                // Populate market selector with checkboxes
-                const markets = [...new Set(properties.map(p => p.market).filter(m => m !== 'N/A' && m !== ''))];
-                const marketSelectorList = document.getElementById('market-selector-list');
-                const selectAllLabel = marketSelectorList.querySelector('label');
-                markets.forEach(function(market) {
-                    const label = document.createElement('label');
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.value = market;
-                    checkbox.checked = true;
-                    label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${market}`));
-                    marketSelectorList.appendChild(label);
-                });
+    <!-- Footer Section -->
+    <footer class="bg-blue-900 text-white py-6 mt-12">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2025 National IOS Land Search. All rights reserved.</p>
+        </div>
+    </footer>
 
-                // Toggle market selector visibility
-                const marketToggle = document.getElementById('market-toggle');
-                marketToggle.addEventListener('click', function() {
-                    const marketList = document.getElementById('market-selector-list');
-                    marketList.classList.toggle('collapsed');
-                    this.textContent = marketList.classList.contains('collapsed') ? 'Show Market Selection' : 'Hide Market Selection';
-                });
-
-                // Event for select all
-                const selectAllCheckbox = document.getElementById('select-all-markets');
-                selectAllCheckbox.addEventListener('change', function() {
-                    const marketCheckboxes = marketSelectorList.querySelectorAll('input[type="checkbox"][value]');
-                    marketCheckboxes.forEach(cb => cb.checked = this.checked);
-                    updateMapAndProperties(getSelectedMarkets());
-                });
-
-                // Event for individual market checkboxes
-                const marketCheckboxes = marketSelectorList.querySelectorAll('input[type="checkbox"][value]');
-                marketCheckboxes.forEach(cb => {
-                    cb.addEventListener('change', function() {
-                        const allChecked = Array.from(marketCheckboxes).every(cb => cb.checked);
-                        selectAllCheckbox.checked = allChecked;
-                        updateMapAndProperties(getSelectedMarkets());
-                    });
-                });
-
-                // Property search functionality
-                const propertySearchInput = document.getElementById('property-search');
-                const searchResults = document.getElementById('search-results');
-                propertySearchInput.addEventListener('input', function() {
-                    const value = this.value.toLowerCase();
-                    searchResults.innerHTML = '';
-                    if (value === '') {
-                        searchResults.style.display = 'none';
-                        return;
-                    }
-                    const selectedMarkets = getSelectedMarkets();
-                    const matchingProperties = properties
-                        .map((prop, index) => ({ prop, index }))
-                        .filter(({ prop, index }) => 
-                            prop.name.toLowerCase().includes(value) && 
-                            (selectedMarkets === 'all' || selectedMarkets.includes(prop.market)) && 
-                            !excluded.has(index)
-                        );
-                    if (matchingProperties.length > 0) {
-                        matchingProperties.forEach(({ prop, index }, displayIndex) => {
-                            const number = selectedMarkets === 'all' ? index + 1 : displayIndex + 1;
-                            const resultItem = document.createElement('div');
-                            resultItem.textContent = `${number}: ${prop.name}`;
-                            resultItem.onclick = function() {
-                                map.flyTo([prop.lat, prop.lng], 15);
-                                markers[index].openPopup();
-                                searchResults.style.display = 'none';
-                                propertySearchInput.value = '';
-                            };
-                            searchResults.appendChild(resultItem);
-                        });
-                        searchResults.style.display = 'block';
-                    } else {
-                        searchResults.style.display = 'none';
-                    }
-                });
-
-                // Market search functionality
-                const marketSearchInput = document.getElementById('market-search');
-                const marketSearchResults = document.getElementById('market-search-results');
-                marketSearchInput.addEventListener('input', function() {
-                    const value = this.value.toLowerCase();
-                    marketSearchResults.innerHTML = '';
-                    if (value === '') {
-                        marketSearchResults.style.display = 'none';
-                        return;
-                    }
-                    const matchingMarkets = markets.filter(market => market.toLowerCase().includes(value));
-                    if (matchingMarkets.length > 0) {
-                        matchingMarkets.forEach(market => {
-                            const resultItem = document.createElement('div');
-                            resultItem.textContent = market;
-                            resultItem.onclick = function() {
-                                const checkbox = marketSelectorList.querySelector(`input[value="${market}"]`);
-                                if (checkbox) {
-                                    checkbox.checked = true;
-                                }
-                                updateMapAndProperties(getSelectedMarkets());
-                                marketSearchResults.style.display = 'none';
-                                marketSearchInput.value = '';
-                            };
-                            marketSearchResults.appendChild(resultItem);
-                        });
-                        marketSearchResults.style.display = 'block';
-                    } else {
-                        marketSearchResults.style.display = 'none';
-                    }
-                });
-
-                // Function to update map, property selector, and title based on selected markets
-                function updateMapAndProperties(selectedMarkets) {
-                    // Update map title
-                    const mapTitle = document.getElementById('map-title');
-                    if (selectedMarkets === 'all') {
-                        mapTitle.textContent = 'NIOS Land Map';
-                    } else if (selectedMarkets.length === 1) {
-                        mapTitle.textContent = `${selectedMarkets[0]} Market Map`;
-                    } else {
-                        mapTitle.textContent = 'Selected Markets Map';
-                    }
-
-                    // Get indices of properties for the selected markets
-                    const marketIndices = properties
-                        .map((prop, index) => ({ prop, index }))
-                        .filter(({ prop, index }) => 
-                            (selectedMarkets === 'all' || selectedMarkets.includes(prop.market)) && 
-                            !excluded.has(index)
-                        )
-                        .map(({ index }) => index);
-
-                    // Update marker numbers
-                    Object.keys(markers).forEach(index => {
-                        if (map.hasLayer(markers[index])) {
-                            map.removeLayer(markers[index]);
+    <script>
+        // Function to initialize autocomplete on an input
+        function initAutocomplete(input) {
+            $(input).autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: "http://gd.geobytes.com/AutoCompleteCity",
+                        dataType: "jsonp",
+                        data: {
+                            filter: "US",
+                            q: request.term
+                        },
+                        success: function(data) {
+                            if (data && data.length && data[0] !== "%LOCATION%") {
+                                // Remove ", US" from each suggestion
+                                const formattedData = data.map(item => item.replace(", US", ""));
+                                response(formattedData);
+                            } else {
+                                response([]);
+                            }
                         }
                     });
+                },
+                minLength: 2 // Start suggesting after 2 characters
+            });
+        }
 
-                    marketIndices.forEach((index, displayIndex) => {
-                        const property = properties[index];
-                        const number = displayIndex + 1;
-                        const bgColor = marketColors[property.market] || defaultColor;
-                        const customIcon = L.divIcon({
-                            className: '',
-                            html: `<div class="custom-marker-icon" style="background-color: ${bgColor};">${number}</div>`,
-                            iconSize: [28, 28],
-                            iconAnchor: [14, 14]
-                        });
+        // Clear localStorage on page load to ensure fresh form
+        document.addEventListener('DOMContentLoaded', () => {
+            localStorage.removeItem('landSearchForm'); // Clear saved form data
 
-                        markers[index].setIcon(customIcon);
-                        markers[index].addTo(map);
-                    });
+            const marketsContainer = document.getElementById('marketsContainer');
+            // Initialize autocomplete on the default market input
+            const defaultInput = marketsContainer.querySelector('input[name="markets[]"]');
+            initAutocomplete(defaultInput);
 
-                    // Update property selector
-                    const propertySelector = document.getElementById('property-selector');
-                    propertySelector.innerHTML = '<option value="">Select a property...</option>';
-                    marketIndices.forEach((index, displayIndex) => {
-                        const property = properties[index];
-                        const number = displayIndex + 1;
-                        const option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = `${number}: ${property.name}`;
-                        propertySelector.appendChild(option);
-                    });
-
-                    // Update map bounds
-                    const visibleProperties = properties.filter((prop, index) => marketIndices.includes(index));
-                    if (visibleProperties.length > 0) {
-                        const bounds = L.latLngBounds(visibleProperties.map(prop => [prop.lat, prop.lng]));
-                        map.fitBounds(bounds.pad(0.2));
-                    }
+            // Add event listener for remove market buttons
+            marketsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('removeMarket')) {
+                    e.target.parentElement.remove();
                 }
+            });
 
-                document.getElementById('manage-exclusions').addEventListener('click', function() {
-                    const selectedMarkets = getSelectedMarkets();
-                    const modal = document.getElementById('exclusions-modal');
-                    modal.style.display = 'block';
-                    const list = document.getElementById('exclusions-list');
-                    list.innerHTML = '';
-                    properties.forEach(function(prop, index) {
-                        if (selectedMarkets === 'all' || selectedMarkets.includes(prop.market)) {
-                            const displayIndex = properties
-                                .slice(0, index)
-                                .filter((p, i) => (selectedMarkets === 'all' || selectedMarkets.includes(p.market)) && !excluded.has(i)).length + 1;
-                            const li = document.createElement('li');
-                            const checkbox = document.createElement('input');
-                            checkbox.type = 'checkbox';
-                            checkbox.dataset.index = index;
-                            checkbox.classList.add('exclude-checkbox');
-                            if (excluded.has(index)) checkbox.checked = true;
-                            li.appendChild(checkbox);
-                            li.appendChild(document.createTextNode(` ${displayIndex}: ${prop.name}`));
-                            list.appendChild(li);
-                        }
-                    });
+            // Clear form button event listener
+            document.getElementById('clearForm').addEventListener('click', () => {
+                const form = document.getElementById('landSearchForm');
+                form.reset(); // Reset all form inputs
+                // Clear market fields except the first one
+                const marketFields = marketsContainer.querySelectorAll('.market-field');
+                marketFields.forEach((field, index) => {
+                    if (index > 0) field.remove();
                 });
-
-                document.getElementById('screenshot-markets').addEventListener('click', takeMarketScreenshots);
-
-                const closeSpans = document.getElementsByClassName('close');
-                for (let i = 0; i < closeSpans.length; i++) {
-                    closeSpans[i].addEventListener('click', function() {
-                        this.parentElement.parentElement.style.display = 'none';
-                    });
-                }
-
-                document.getElementById('send-excluded').addEventListener('click', function() {
-                    if (excluded.size === 0) {
-                        alert('No properties excluded.');
-                        return;
-                    }
-                    let body = 'Excluded Properties:\n\n';
-                    properties.forEach(function(prop, index) {
-                        if (excluded.has(index)) {
-                            body += `${index + 1}: ${prop.name}\n`;
-                            body += `Lat: ${prop.lat}\n`;
-                            body += `Lng: ${prop.lng}\n`;
-                            body += `Zoning: ${prop.zoning}\n`;
-                            body += `AC: ${prop.ac}\n`;
-                            body += `Market: ${prop.market}\n`;
-                            body += `$/sf: ${prop.dollar_per_sf}\n`;
-                            body += `Price: ${prop.price}\n`;
-                            body += `Link: ${prop.link}\n\n`;
-                        }
-                    });
-                    const encodedTo = encodeURIComponent('jpistone@national-ios.com');
-                    const encodedSubject = encodeURIComponent('Excluded Properties');
-                    const encodedBody = encodeURIComponent(body);
-                    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodedTo}&subject=${encodedSubject}&body=${encodedBody}`;
-                    window.open(outlookUrl, '_blank');
-                });
-
-                // Initial update
-                updateMapAndProperties(getSelectedMarkets());
-
-                document.getElementById('loading-indicator').style.display = 'none';
-            },
-            error: function(error) {
-                console.error('Error loading CSV:', error);
-                document.getElementById('property-selector').innerHTML = '<option value="">Error loading properties</option>';
-                document.getElementById('market-selector-container').innerHTML = 'Error loading markets';
-                document.getElementById('market-search').placeholder = 'Error loading markets';
-                document.getElementById('property-search').placeholder = 'Error loading properties';
-                document.getElementById('loading-indicator').style.display = 'none';
-            }
+                // Clear the first market input
+                marketsContainer.querySelector('input[name="markets[]"]').value = '';
+                localStorage.removeItem('landSearchForm'); // Clear localStorage
+            });
         });
 
-        document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('exclude-checkbox')) {
-                const index = parseInt(e.target.dataset.index);
-                if (e.target.checked) {
-                    excluded.add(index);
-                } else {
-                    excluded.delete(index);
-                }
-                updateMapAndProperties(getSelectedMarkets());
-            }
-        });
-    </script>
-</body>
-</html> pout this immage from the url provided in the bottom left of the map https://ik.imagekit.io/lwowie9pn/Unknown-1%20copy.png?updatedAt=1754674703991
+        // Add market input field
+        document.getElementById('addMarket').addEventListener('click', () => {
+            const marketsContainer = document.get NIOS-Land-Map/") {
+                window.location.href = "https://jakepistone.github.io/NIOS-Land-Map/";
+            });
+        </script>
+    </body>
+    </html>
